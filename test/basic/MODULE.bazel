@@ -1,0 +1,11 @@
+module(name = "rules_l0_test_basic")
+
+bazel_dep(name = "rules_l0", version = "0.1.0")
+local_path_override(module_name = "rules_l0", path = "../..")
+
+l0_installer = use_extension("@rules_l0//l0:installer.bzl", "installer")
+l0_installer.download(
+    name = "level_zero",
+    version = "1.21.9",
+)
+use_repo(l0_installer, "level_zero")

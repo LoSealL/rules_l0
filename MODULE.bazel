@@ -1,0 +1,17 @@
+"""
+Copyright (c) 2025 Wenyi Tang
+Author: Wenyi Tang
+E-mail: wenyitang@outlook.com
+
+"""
+module(name = "rules_l0", version = "0.1.0")
+
+bazel_dep(name = "platforms", version = "0.0.9")
+bazel_dep(name = "spdlog", version = "1.15.2")
+
+l0_installer = use_extension("//l0/private:extensions.bzl", "installer")
+l0_installer.download(
+    name = "level_zero",
+    version = "1.21.9",
+)
+use_repo(l0_installer, "level_zero")

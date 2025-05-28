@@ -1,0 +1,4 @@
+external
+**/external
+
+**/MODULE.bazel.lock
