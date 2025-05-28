@@ -10,7 +10,7 @@ bazel_dep(name = "platforms", version = "0.0.9")
 bazel_dep(name = "spdlog", version = "1.15.2")
 
 l0_installer = use_extension("//l0/private:extensions.bzl", "installer")
-l0_installer.download(
+l0_installer.compile_from_source(
     name = "level_zero",
     version = "1.21.9",
 )

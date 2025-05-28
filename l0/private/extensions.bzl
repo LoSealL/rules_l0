@@ -17,26 +17,21 @@ def _find_modules(module_ctx):
             our_module = mod
     if root == None:
         root = our_module
+    if root == None and our_module == None:
+        fail("Can't find rules_l0 module: ({} {})".format(root, our_module))
 
     return root, our_module
 
-def load_zeloader(ctx):
-    """Load oneAPI Level-zero
+def _is_windows(os_name):
+    return "windows" in os_name
 
-    release page:
-    https://github.com/oneapi-src/level-zero/releases
+def _canonical_os_name(os_name):
+    return "windows" if _is_windows(os_name) else "linux"
 
-    current version: 1.21.9
-
-    Args:
-        ctx: The module context.
-    """
-
+def _compile_from_sources(download_installers):
     VER_TO_HASH = {
         "1.21.9": "sha256-ulQ6Aa28vSQVGMPu6At1QUCU0f0+/N6f8mkxls6k0Fc=",
     }
-    root, rules_l0 = _find_modules(ctx)
-    download_installers = root.tags.download or rules_l0.tags.download
 
     for installer in download_installers:
         level_zero_version = installer.version
@@ -52,10 +47,59 @@ def load_zeloader(ctx):
             url = "https://github.com/oneapi-src/level-zero/archive/refs/tags/v%s.tar.gz" % level_zero_version,
         )
 
+def _prebuilt_binaries(ctx, installers):
+    VER_TO_HASH = {
+        "windows": {"1.21.9": "sha256-uldv3yxyb+rLtH+Rar7MpcRU8/vXADK4P02Jw18s3YM="},
+        "linux": {"1.21.9": ""},
+    }
+    hashmap = VER_TO_HASH[_canonical_os_name(ctx.os.name)]
+
+    for installer in installers:
+        level_zero_version = installer.version
+        integrity = installer.integrity
+        if not integrity and level_zero_version in VER_TO_HASH:
+            integrity = hashmap[level_zero_version]
+
+        if _is_windows(ctx.os.name):
+            http_archive(
+                name = installer.name,
+                build_file = "//l0/private/rules:ze_loader_win32.BUILD",
+                integrity = integrity,
+                url = "https://github.com/oneapi-src/level-zero/releases/download/v{0}/level-zero-win-sdk-{0}.zip".format(level_zero_version),
+            )
+        else:
+            fail("not supported yet!")
+
+def load_zeloader(ctx):
+    """Load oneAPI Level-zero
+
+    release page:
+    https://github.com/oneapi-src/level-zero/releases
+
+    current version: 1.21.9
+
+    Args:
+        ctx: The module context.
+    """
+
+    root, rules_l0 = _find_modules(ctx)
+    if root.tags.compile_from_source:
+        download_installers = root.tags.compile_from_source or (rules_l0 != None and rules_l0.tags.compile_from_source)
+        _compile_from_sources(download_installers)
+
+    if root.tags.download_prebuilt:
+        prebuilt_installers = root.tags.download_prebuilt or rules_l0.tags.download_prebuilt
+        _prebuilt_binaries(ctx, prebuilt_installers)
+
 installer = module_extension(
     implementation = load_zeloader,
     tag_classes = {
-        "download": tag_class(attrs = {
+        "compile_from_source": tag_class(attrs = {
+            "name": attr.string(default = "level_zero"),
+            "version": attr.string(default = "1.21.9"),
+            "integrity": attr.string(default = ""),
+        }),
+        "download_prebuilt": tag_class(attrs = {
             "name": attr.string(default = "level_zero"),
             "version": attr.string(default = "1.21.9"),
             "integrity": attr.string(default = ""),
