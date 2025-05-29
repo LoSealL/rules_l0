@@ -4,7 +4,7 @@ Author: Wenyi Tang
 E-mail: wenyitang@outlook.com
 
 """
-module(name = "rules_l0", version = "0.1.0")
+module(name = "rules_l0", version = "0.1.1")
 
 bazel_dep(name = "platforms", version = "0.0.9")
 bazel_dep(name = "spdlog", version = "1.15.2")

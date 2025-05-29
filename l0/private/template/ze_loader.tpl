@@ -21,26 +21,25 @@ cc_library(
     ],
 )
 
-LOADER_VERSION_MAJOR = "1"
+LOADER_VERSION_MAJOR = "%{version_major}"  # type int
 
-LOADER_VERSION_MINOR = "21"
+LOADER_VERSION_MINOR = "%{version_minor}"  # type int
 
-LOADER_VERSION_PATCH = "9"
+LOADER_VERSION_PATCH = "%{version_patch}"  # type int
 
-LOADER_VERSION_SHA = "\\\"ba543a01adbcbd241518c3eee80b75414094d1fd3efcde9ff2693196cea4d057\\\""
+LOADER_VERSION_SHA = "\\\"%{version_sha}\\\""
 
 ze_copts = select({
     "@platforms//os:windows": [
-        "/std:c++14",
+        "/std:c++17",
         "/guard:cf",
         "/W3",
-        "/MP",
         "/EHsc",
         "/Z7",
         "/utf-8",
     ],
     "//conditions:default": [
-        "-std=c++14",
+        "-std=c++17",
         "-fpermissive",
         "-fPIC",
         "-fvisibility=hidden",
@@ -127,8 +126,8 @@ cc_binary(
     ] + glob(["source/inc/*.h"]),
     copts = ze_copts,
     defines = [
-        "L0_LOADER_VERSION=\\\"1\\\"",
-        "L0_VALIDATION_LAYER_SUPPORTED_VERSION=\\\"1\\\"",
+        "L0_LOADER_VERSION=\\\"{}\\\"".format(LOADER_VERSION_MAJOR),
+        "L0_VALIDATION_LAYER_SUPPORTED_VERSION=\\\"{}\\\"".format(LOADER_VERSION_MAJOR),
     ],
     includes = ["source/inc"],
     linkopts = ze_linkopts + select({

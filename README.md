@@ -14,7 +14,7 @@ Add the following to your `MODULE.bazel` file and replace the placeholders with 
 
 ```starlark
 
-bazel_dep(name = "rules_l0", version = "0.1.0")
+bazel_dep(name = "rules_l0", version = "0.1.1")
 archive_override(
     module_name = "rules_l0",
     integrity = "{SRI value}",  # see https://developer.mozilla.org/en-US/docs/Web/Security/Subresource_Integrity

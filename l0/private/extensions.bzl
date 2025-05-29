@@ -6,6 +6,7 @@ E-mail: wenyitang@outlook.com
 """
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+load(":repository.bzl", "download_source", "extract_deb")
 
 def _find_modules(module_ctx):
     root = None
@@ -35,22 +36,33 @@ def _compile_from_sources(download_installers):
 
     for installer in download_installers:
         level_zero_version = installer.version
+        version_major, version_minor, version_patch = level_zero_version.split(".")
         integrity = installer.integrity
         if not integrity and level_zero_version in VER_TO_HASH:
             integrity = VER_TO_HASH[level_zero_version]
 
-        http_archive(
+        download_source(
             name = installer.name,
-            build_file = "//l0/private/rules:ze_loader.BUILD",
+            build_file = "//l0/private/template:ze_loader.tpl",
             integrity = integrity,
             strip_prefix = "level-zero-%s" % level_zero_version,
             url = "https://github.com/oneapi-src/level-zero/archive/refs/tags/v%s.tar.gz" % level_zero_version,
+            version_major = version_major,
+            version_minor = version_minor,
+            version_patch = version_patch,
+            version_sha = integrity,
         )
 
 def _prebuilt_binaries(ctx, installers):
     VER_TO_HASH = {
         "windows": {"1.21.9": "sha256-uldv3yxyb+rLtH+Rar7MpcRU8/vXADK4P02Jw18s3YM="},
-        "linux": {"1.21.9": ""},
+        "linux": {
+            # two sha256 the 1st is for devel and the 2nd is for runtime
+            "1.21.9": [
+                "sha256-22STk80QFMUx1eeqT5WxPpSym9V8c2+lWKwpfxhVzTo=",
+                "sha256-SBVOrpSeF7WhgGqlmI8AE6SQoGKlxi+mNdSpfe1EKyY=",
+            ],
+        },
     }
     hashmap = VER_TO_HASH[_canonical_os_name(ctx.os.name)]
 
@@ -68,7 +80,20 @@ def _prebuilt_binaries(ctx, installers):
                 url = "https://github.com/oneapi-src/level-zero/releases/download/v{0}/level-zero-win-sdk-{0}.zip".format(level_zero_version),
             )
         else:
-            fail("not supported yet!")
+            os_version = "u24.04_amd64"
+            extract_deb(
+                name = installer.name,
+                build_file = "//l0/private/rules:ze_loader_unix.BUILD",
+                integrity = integrity,
+                dev_url = "https://github.com/oneapi-src/level-zero/releases/download/v{0}/level-zero-devel_{0}+{1}.deb".format(
+                    level_zero_version,
+                    os_version,
+                ),
+                url = "https://github.com/oneapi-src/level-zero/releases/download/v{0}/level-zero_{0}+{1}.deb".format(
+                    level_zero_version,
+                    os_version,
+                ),
+            )
 
 def load_zeloader(ctx):
     """Load oneAPI Level-zero
