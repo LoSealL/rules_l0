@@ -105,7 +105,7 @@ cc_library(
 cc_library(
     name = "utils",
     srcs = ["source/utils/logging.cpp"],
-    hdrs = ["source/utils/logging.h"],
+    hdrs = ["source/utils/logging.h"] + glob(["source/inc/*.h"]),
     copts = ze_copts,
     defines = ze_defines,
     includes = [
@@ -123,13 +123,12 @@ cc_binary(
     srcs = [
         ":lib",
         ":loader",
-    ] + glob(["source/inc/*.h"]),
+    ],
     copts = ze_copts,
     defines = [
         "L0_LOADER_VERSION=\\\"{}\\\"".format(LOADER_VERSION_MAJOR),
         "L0_VALIDATION_LAYER_SUPPORTED_VERSION=\\\"{}\\\"".format(LOADER_VERSION_MAJOR),
     ],
-    includes = ["source/inc"],
     linkopts = ze_linkopts + select({
         "@platforms//os:windows": [
             "-DEFAULTLIB:Advapi32.lib",

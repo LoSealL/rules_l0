@@ -26,8 +26,12 @@ def _find_modules(module_ctx):
 def _is_windows(os_name):
     return "windows" in os_name
 
-def _canonical_os_name(os_name):
-    return "windows" if _is_windows(os_name) else "linux"
+def _canonical_os_name(ctx):
+    if ctx.os.name == "linux":
+        result = ctx.execute(["lsb_release", "-r"])
+        if result.return_code == 0:
+            return "u{}_{}".format(result.stdout.strip("\n").split("\t")[-1], ctx.os.arch)
+    return "windows" if _is_windows(ctx.os.name) else "linux"
 
 def _compile_from_sources(download_installers):
     VER_TO_HASH = {
@@ -56,23 +60,34 @@ def _compile_from_sources(download_installers):
 def _prebuilt_binaries(ctx, installers):
     VER_TO_HASH = {
         "windows": {"1.21.9": "sha256-uldv3yxyb+rLtH+Rar7MpcRU8/vXADK4P02Jw18s3YM="},
-        "linux": {
+        "u22.04_amd64": {
             # two sha256 the 1st is for devel and the 2nd is for runtime
+            "1.21.9": [
+                "sha256-xnPwRLV00zTWA83nI3I/JafYckbv22ajHxY3Z3XMFBA=",
+                "sha256-8U4qZnv5tPv8QubCuKoOed6pxoERZiy9rij++r9gnhU=",
+            ],
+        },
+        "u24.04_amd64": {
             "1.21.9": [
                 "sha256-22STk80QFMUx1eeqT5WxPpSym9V8c2+lWKwpfxhVzTo=",
                 "sha256-SBVOrpSeF7WhgGqlmI8AE6SQoGKlxi+mNdSpfe1EKyY=",
             ],
         },
     }
-    hashmap = VER_TO_HASH[_canonical_os_name(ctx.os.name)]
+    os_name = _canonical_os_name(ctx)
+    if os_name not in VER_TO_HASH:
+        fail("Current os {} doesn't have prebuilt binaries".format(os_name))
+    hashmap = VER_TO_HASH[_canonical_os_name(ctx)]
 
     for installer in installers:
         level_zero_version = installer.version
         integrity = installer.integrity
-        if not integrity and level_zero_version in VER_TO_HASH:
+        if not integrity and level_zero_version in hashmap:
             integrity = hashmap[level_zero_version]
 
         if _is_windows(ctx.os.name):
+            if type(integrity) == list:
+                integrity = integrity[0]
             http_archive(
                 name = installer.name,
                 build_file = "//l0/private/rules:ze_loader_win32.BUILD",
@@ -80,18 +95,17 @@ def _prebuilt_binaries(ctx, installers):
                 url = "https://github.com/oneapi-src/level-zero/releases/download/v{0}/level-zero-win-sdk-{0}.zip".format(level_zero_version),
             )
         else:
-            os_version = "u24.04_amd64"
             extract_deb(
                 name = installer.name,
                 build_file = "//l0/private/rules:ze_loader_unix.BUILD",
                 integrity = integrity,
                 dev_url = "https://github.com/oneapi-src/level-zero/releases/download/v{0}/level-zero-devel_{0}+{1}.deb".format(
                     level_zero_version,
-                    os_version,
+                    os_name,
                 ),
                 url = "https://github.com/oneapi-src/level-zero/releases/download/v{0}/level-zero_{0}+{1}.deb".format(
                     level_zero_version,
-                    os_version,
+                    os_name,
                 ),
             )
 
@@ -127,7 +141,7 @@ installer = module_extension(
         "download_prebuilt": tag_class(attrs = {
             "name": attr.string(default = "level_zero"),
             "version": attr.string(default = "1.21.9"),
-            "integrity": attr.string(default = ""),
+            "integrity": attr.string_list(),
         }),
     },
 )
